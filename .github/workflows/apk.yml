@@ -1,0 +1,54 @@
+name: APK derle
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zip'i ac
+        run: unzip -o KUSITCANO.zip && chmod -R u+w .
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Android iskeletini olustur
+        run: |
+          mkdir -p /tmp/bak
+          cp pubspec.yaml main.dart icon.png /tmp/bak/
+          flutter create --platforms=android --org com.kusitcano --project-name kusitcano .
+          cp -f /tmp/bak/pubspec.yaml /tmp/bak/main.dart /tmp/bak/icon.png .
+          rm -rf test
+
+      - run: flutter pub get
+
+      - name: Ikon olustur
+        run: dart run flutter_launcher_icons
+
+      - name: Uygulama adini ayarla
+        run: sed -i 's/android:label="[^"]*"/android:label="KUŞİTCANO"/' android/app/src/main/AndroidManifest.xml
+
+      - name: APK derle
+        run: flutter build apk --release -t main.dart
+
+      - name: APK'yi Releases'e koy
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: KUŞİTCANO APK ${{ github.run_number }}
+          files: build/app/outputs/flutter-apk/app-release.apk
